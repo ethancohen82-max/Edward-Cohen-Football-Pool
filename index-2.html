@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edward Cohen Memorial Football Pool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-firestore-compat.min.js"></script>
+<style>
+  :root{
+    --ink:#16232B;
+    --cream:#F5F2E9;
+    --paper:#FFFDF8;
+    --field:#1B3A2B;
+    --field-dark:#122A1F;
+    --amber:#E0A230;
+    --amber-dark:#B87F1E;
+    --red:#A6332F;
+    --red-light:#F4DEDC;
+    --green-light:#E1EBDD;
+    --line:#D8D2C0;
+    --muted:#75705F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{font-family:'Teko',sans-serif; letter-spacing:0.02em;}
+  #root{max-width:960px; margin:0 auto; padding-bottom:60px;}
+
+  /* header */
+  .marquee{
+    background:var(--field);
+    background-image:repeating-linear-gradient(180deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px);
+    color:var(--cream);
+    padding:22px 20px 18px;
+    text-align:center;
+    border-bottom:4px solid var(--amber);
+  }
+  .marquee .eyebrow{
+    font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--amber); font-weight:600; margin:0 0 4px;
+  }
+  .marquee-row{display:flex; align-items:center; justify-content:center; gap:22px; max-width:900px; margin:0 auto;}
+  .marquee-text{flex:1; min-width:0;}
+  .marquee h1{
+    font-family:'Teko',sans-serif; font-weight:700; font-size:38px; line-height:1; margin:0; letter-spacing:0.01em;
+  }
+  .ball-icon-big{width:80px; height:48px; flex-shrink:0;}
+  @media (max-width:680px){
+    .ball-icon-big{width:44px; height:26px;}
+    .marquee-row{gap:10px;}
+  }
+  .commissioners{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:12px; margin-top:10px;}
+  .commish-item{display:flex; flex-direction:column; align-items:center; line-height:1.3; font-size:12.5px; color:var(--cream); font-weight:500;}
+  .commish-item .role{font-size:9.5px; text-transform:uppercase; letter-spacing:0.09em; color:var(--amber); font-weight:700; margin-bottom:2px;}
+  .commish-divider{width:1px; height:22px; background:rgba(255,255,255,0.18);}
+
+  /* tabs */
+  .tabs{display:flex; background:var(--field-dark); border-bottom:1px solid #0d1e15;}
+  .tab{
+    flex:1; text-align:center; padding:13px 8px; color:#9FB0A2; font-size:14px; font-weight:600;
+    cursor:pointer; border:none; background:transparent; font-family:'Inter',sans-serif;
+    border-bottom:3px solid transparent;
+  }
+  .tab.active{color:var(--amber); border-bottom-color:var(--amber); background:rgba(224,162,48,0.07);}
+  .tab:hover:not(.active){color:var(--cream);}
+
+  .content{padding:22px 18px 10px;}
+
+  h2.section-title{
+    font-family:'Teko',sans-serif; font-weight:600; font-size:26px; margin:0 0 4px; color:var(--field);
+  }
+  p.section-desc{font-size:13.5px; color:var(--muted); margin:0 0 18px; line-height:1.5;}
+
+  /* cards */
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:16px 18px; margin-bottom:14px;
+  }
+  .card h3{margin:0 0 10px; font-size:15px; font-weight:600;}
+
+  /* buttons */
+  button.btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px; padding:9px 16px;
+    border-radius:5px; border:1px solid var(--field); background:var(--field); color:var(--cream);
+    cursor:pointer;
+  }
+  button.btn:hover{background:var(--field-dark);}
+  button.btn.secondary{background:transparent; color:var(--field); border:1px solid var(--line);}
+  button.btn.secondary:hover{border-color:var(--field);}
+  button.btn.danger{background:var(--red); border-color:var(--red);}
+  button.btn.danger:hover{background:#8a2825;}
+  button.btn.amber{background:var(--amber); border-color:var(--amber); color:var(--ink);}
+  button.btn.amber:hover{background:var(--amber-dark);}
+  button.btn:disabled{opacity:0.45; cursor:not-allowed;}
+  button.btn.small{padding:5px 10px; font-size:12px;}
+
+  input[type=text], input[type=number], select{
+    font-family:'Inter',sans-serif; font-size:14px; padding:8px 10px; border-radius:5px;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink); width:100%;
+  }
+  input:focus, select:focus{outline:2px solid var(--amber); outline-offset:1px;}
+  label.field-label{font-size:11.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); font-weight:600; display:block; margin-bottom:5px;}
+
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .row > div{flex:1; min-width:120px;}
+
+  /* standings scoreboard */
+  .scoreboard{background:var(--paper); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:18px;}
+  .board-row{
+    display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line);
+  }
+  .board-row:last-child{border-bottom:none;}
+  .board-row.head{background:var(--cream); padding:8px 16px;}
+  .rank{
+    font-family:'Teko',sans-serif; font-size:22px; color:var(--amber-dark); width:34px; font-weight:600;
+  }
+  .board-row.head .rank{font-family:'Inter',sans-serif; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600;}
+  .pname{flex:1; color:var(--ink); font-size:15px; font-weight:500;}
+  .board-row.head .pname{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600;}
+  .ppoints{
+    font-family:'Teko',sans-serif; font-size:26px; font-weight:600; color:var(--ink); min-width:90px; text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .board-row.head .ppoints{font-family:'Inter',sans-serif; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600;}
+  .pdelta{font-size:12.5px; font-weight:700; min-width:78px; text-align:right; font-variant-numeric:tabular-nums; display:flex; align-items:center; justify-content:flex-end; gap:2px;}
+  .pdelta.up{color:#12B84C;}
+  .pdelta.down{color:var(--red);}
+  .pdelta svg{width:10px; height:10px;}
+  .pstatus{font-size:11px; color:var(--muted); min-width:60px; text-align:right;}
+  .pstatus.out{color:var(--red); font-weight:600;}
+  .pstatus.pending{color:var(--amber-dark);}
+
+  .badge{display:inline-block; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.04em;}
+  .badge.locked{background:var(--red-light); color:var(--red);}
+  .badge.open{background:var(--green-light); color:#2E5C29;}
+
+  /* games */
+  .game-card{border:1px solid var(--line); border-radius:6px; padding:12px 14px; margin-bottom:10px; background:var(--paper);}
+  .game-card.selected{border-color:var(--amber); background:#FFF8EA;}
+  .game-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .game-teams{font-weight:600; font-size:14px;}
+  .game-score{font-size:12px; color:var(--muted);}
+  .team-pick-row{display:flex; gap:8px; margin-top:8px;}
+  .team-btn{
+    flex:1; padding:9px 8px; border-radius:5px; border:1px solid var(--line); background:var(--paper);
+    cursor:pointer; text-align:center; font-size:13px; font-weight:600; color:var(--ink);
+  }
+  .team-btn.chosen{background:var(--field); color:var(--cream); border-color:var(--field);}
+  .team-btn .spread-tag{display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:2px;}
+  .team-btn.chosen .spread-tag{color:#C9D6CC;}
+  .checkbox-row{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);}
+  .result-tag{font-size:11px; font-weight:600; padding:2px 7px; border-radius:4px;}
+  .result-tag.win{background:var(--green-light); color:#2E5C29;}
+  .result-tag.loss{background:var(--red-light); color:var(--red);}
+  .result-tag.push{background:#EFEBDD; color:var(--muted);}
+  .result-tag.pending{background:#EFEBDD; color:var(--muted);}
+
+  .wager-sum{
+    position:sticky; bottom:0; background:var(--paper); border-top:2px solid var(--field); padding:12px 16px;
+    display:flex; justify-content:space-between; align-items:center; border-radius:0 0 6px 6px; margin-top:-14px;
+  }
+  .wager-sum .amt{font-family:'Teko',sans-serif; font-size:24px; font-weight:600;}
+  .wager-sum .amt.bad{color:var(--red);}
+  .wager-sum .amt.good{color:#2E5C29;}
+
+  .empty-note{font-size:13px; color:var(--muted); font-style:italic; padding:10px 0;}
+  .divider{border:none; border-top:1px solid var(--line); margin:18px 0;}
+  table.plain{width:100%; border-collapse:collapse; font-size:13px;}
+  table.plain th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); border-bottom:1px solid var(--line); padding:6px 4px;}
+  table.plain td{padding:7px 4px; border-bottom:1px solid var(--line);}
+  .msg{font-size:13px; padding:9px 12px; border-radius:5px; margin-bottom:12px;}
+  .msg.err{background:var(--red-light); color:var(--red);}
+  .msg.ok{background:var(--green-light); color:#2E5C29;}
+  .msg.warn{background:#FBEBCC; color:var(--amber-dark); font-weight:600; border:1px solid var(--amber);}
+  .inline-x{background:none; border:none; color:var(--red); cursor:pointer; font-size:16px; padding:2px 6px; line-height:1;}
+  .rules-box{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:14px 16px; font-size:12.5px; color:var(--muted); line-height:1.7;}
+  .rules-box b{color:var(--ink);}
+  details summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--field); margin-bottom:6px;}
+  .week-picker{display:flex; align-items:center; gap:10px; margin-bottom:16px;}
+  .week-picker select{width:auto; min-width:110px;}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="marquee">
+    <div class="marquee-row">
+      <svg class="ball-icon-big" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="50" cy="30" rx="46" ry="24" fill="#8B4A2B" stroke="#5C2E17" stroke-width="2"/>
+        <path d="M20 30 Q50 8 80 30 Q50 52 20 30" fill="none" stroke="#F0E6D8" stroke-width="1.5" opacity="0.5"/>
+        <line x1="38" y1="30" x2="62" y2="30" stroke="#F0E6D8" stroke-width="2.5"/>
+        <line x1="42" y1="25" x2="42" y2="35" stroke="#F0E6D8" stroke-width="2"/>
+        <line x1="48" y1="24" x2="48" y2="36" stroke="#F0E6D8" stroke-width="2"/>
+        <line x1="54" y1="24" x2="54" y2="36" stroke="#F0E6D8" stroke-width="2"/>
+        <line x1="60" y1="25" x2="60" y2="35" stroke="#F0E6D8" stroke-width="2"/>
+      </svg>
+      <div class="marquee-text">
+        <p class="eyebrow">Est. 1980s &middot; No fantasy, no players &mdash; just teams</p>
+        <h1 class="display">EDWARD COHEN MEMORIAL FOOTBALL POOL</h1>
+        <div class="commissioners">
+          <span class="commish-item"><span class="role">Commissioner</span>Michael Cohen</span>
+          <span class="commish-divider"></span>
+          <span class="commish-item"><span class="role">Deputy Commissioner</span>Tim Koyonen</span>
+          <span class="commish-divider"></span>
+          <span class="commish-item"><span class="role">Commissioner in Training</span>Ethan Cohen</span>
+        </div>
+      </div>
+      <svg class="ball-icon-big" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <ellipse cx="50" cy="30" rx="46" ry="24" fill="#8B4A2B" stroke="#5C2E17" stroke-width="2"/>
+        <path d="M20 30 Q50 8 80 30 Q50 52 20 30" fill="none" stroke="#F0E6D8" stroke-width="1.5" opacity="0.5"/>
+        <line x1="38" y1="30" x2="62" y2="30" stroke="#F0E6D8" stroke-width="2.5"/>
+        <line x1="42" y1="25" x2="42" y2="35" stroke="#F0E6D8" stroke-width="2"/>
+        <line x1="48" y1="24" x2="48" y2="36" stroke="#F0E6D8" stroke-width="2"/>
+        <line x1="54" y1="24" x2="54" y2="36" stroke="#F0E6D8" stroke-width="2"/>
+        <line x1="60" y1="25" x2="60" y2="35" stroke="#F0E6D8" stroke-width="2"/>
+      </svg>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+const NUM_WEEKS = 18;
+const WAGER_OPTIONS = [50,100,150,200];
+const STARTING_POINTS = 2000;
+const NO_PICK_PENALTY = 300;
+const ADMIN_USERNAME = '10Trilling';
+const ADMIN_PASSWORD = 'EbcAlc1999';
+
+let state = {
+  players: [],
+  weeks: {},
+  picks: {},
+  tab: 'standings',
+  loaded: false
+};
+
+let draft = { week: null, playerId: null, selections: {} };
+let adminNewWeek = 1;
+let adminNewGame = { teamA:'', teamB:'', spread:'' };
+let flashMsg = null;
+let identity = { playerId: null, verified: false };
+let adminAuth = { verified: false };
+
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+function genPin(){ return String(Math.floor(1000 + Math.random()*9000)); }
+
+/* ---------- storage: Firebase Firestore (works on any host, no Claude account needed) ---------- */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCO2z4p2qw-OgW_ExbeowN1-wHVJ1yPeDw",
+  authDomain: "football-pool-d28d6.firebaseapp.com",
+  projectId: "football-pool-d28d6",
+  storageBucket: "football-pool-d28d6.firebasestorage.app",
+  messagingSenderId: "88992763661",
+  appId: "1:88992763661:web:7f32cbd437d40aabb1aa44",
+  measurementId: "G-2M0TZ25M6Z"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+// Long-polling instead of the default streaming connection — this is what typically
+// gets blocked in sandboxed/embedded preview environments (like this chat's artifact
+// panel) and corporate networks. Harmless and unnecessary on a normal host like
+// GitHub Pages, but makes the app resilient in more restrictive environments too.
+db.settings({ experimentalAutoDetectLongPolling: true, useFetchStreams: false });
+const POOL_COLLECTION = 'pool_data';
+
+async function loadKey(key, fallback){
+  try{
+    const doc = await db.collection(POOL_COLLECTION).doc(key).get();
+    return doc.exists ? JSON.parse(doc.data().value) : fallback;
+  }catch(e){ console.error('load failed', key, e); return fallback; }
+}
+async function saveKey(key, value){
+  try{
+    await db.collection(POOL_COLLECTION).doc(key).set({ value: JSON.stringify(value) });
+    return true;
+  }catch(e){ console.error('save failed', key, e); return false; }
+}
+
+async function loadAll(){
+  const [players, weeks, picks, publishedStandings] = await Promise.all([
+    loadKey('players', []),
+    loadKey('weeks', {}),
+    loadKey('picks', {}),
+    loadKey('published-standings', null)
+  ]);
+  state.players = players;
+  state.weeks = weeks;
+  state.picks = picks;
+  state.publishedStandings = publishedStandings;
+  state.loaded = true;
+  // identity and admin access are never remembered across a page load —
+  // every visit starts fully locked and requires the PIN again, on purpose.
+  identity = { playerId:null, verified:false };
+  adminAuth.verified = false;
+  render();
+  await autoLockCheck();
+  setInterval(autoLockCheck, 60000);
+}
+
+function pacificNowString(){
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone:'America/Los_Angeles', year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12:false
+  });
+  const parts = fmt.formatToParts(new Date());
+  const get = ty=>parts.find(p=>p.type===ty).value;
+  let hour = get('hour');
+  if(hour === '24') hour = '00';
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`;
+}
+
+function formatPacificDisplay(deadlineStr){
+  if(!deadlineStr) return '';
+  const [datePart, timePart] = deadlineStr.split('T');
+  const [y,m,d] = datePart.split('-');
+  const dt = new Date(Number(y), Number(m)-1, Number(d));
+  const dateLabel = dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  return `${dateLabel} at ${timePart}`;
+}
+
+function hoursUntilDeadline(deadlineStr){
+  if(!deadlineStr) return null;
+  const now = new Date(pacificNowString());
+  const deadline = new Date(deadlineStr);
+  const diffMs = deadline - now;
+  return diffMs / 3600000;
+}
+
+function formatCountdown(hrs){
+  const totalMinutes = Math.round(hrs * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if(h <= 0) return `${m} minute${m===1?'':'s'}`;
+  if(m === 0) return `${h} hour${h===1?'':'s'}`;
+  return `${h} hour${h===1?'':'s'} ${m} minute${m===1?'':'s'}`;
+}
+
+async function autoLockCheck(){
+  const now = pacificNowString();
+  let changed = false;
+  Object.keys(state.weeks).forEach(wnum=>{
+    const week = state.weeks[wnum];
+    if(week.deadline && !week.locked && now >= week.deadline){
+      week.locked = true;
+      changed = true;
+    }
+  });
+  if(changed){
+    await saveKey('weeks', state.weeks, true);
+    render();
+  }
+}
+
+/* ---------- calculation engine ---------- */
+
+function gameResult(game){
+  if(game.scoreA === null || game.scoreA === undefined || game.scoreA === '' ||
+     game.scoreB === null || game.scoreB === undefined || game.scoreB === '') return null;
+  const adjA = Number(game.scoreA) + Number(game.spread);
+  const scoreB = Number(game.scoreB);
+  if(adjA > scoreB) return 'A';
+  if(adjA < scoreB) return 'B';
+  return 'push';
+}
+
+// returns {change, pending, noPickPenalty} for a player in a given week
+function weekOutcome(weekNum, playerId){
+  const week = state.weeks[weekNum];
+  if(!week) return { change:0, pending:false, hasPicks:false };
+  const games = week.games || [];
+  const playerPicks = (state.picks[weekNum] && state.picks[weekNum][playerId]) || [];
+
+  if(playerPicks.length === 0){
+    if(week.locked){
+      return { change: -NO_PICK_PENALTY, pending:false, hasPicks:false, penalty:true };
+    }
+    return { change:0, pending:false, hasPicks:false };
+  }
+
+  let change = 0;
+  let pending = false;
+  const detail = [];
+  playerPicks.forEach(p=>{
+    const game = games.find(g=>g.id === p.gameId);
+    if(!game){ return; }
+    const res = gameResult(game);
+    if(res === null){
+      pending = true;
+      detail.push({ pick:p, game, result:null });
+      return;
+    }
+    let delta = 0;
+    if(res === 'push') delta = 0;
+    else if(res === p.team) delta = p.wager;
+    else delta = -p.wager;
+    change += delta;
+    detail.push({ pick:p, game, result:res, delta });
+  });
+  return { change, pending, hasPicks:true, detail };
+}
+
+function playerBalanceThroughWeek(playerId, uptoWeekExclusive){
+  let total = STARTING_POINTS;
+  for(let w=1; w<uptoWeekExclusive; w++){
+    const o = weekOutcome(w, playerId);
+    if(!o.pending) total += o.change;
+  }
+  return total;
+}
+
+function playerCurrentTotal(playerId){
+  let total = STARTING_POINTS;
+  let anyPending = false;
+  for(let w=1; w<=NUM_WEEKS; w++){
+    const o = weekOutcome(w, playerId);
+    if(o.pending) anyPending = true;
+    if(!o.pending) total += o.change;
+  }
+  return { total, pending: anyPending };
+}
+
+function sortedWeekNums(){
+  return Object.keys(state.weeks).map(Number).sort((a,b)=>a-b);
+}
+
+function computeLiveStandings(){
+  return state.players.map(p=>{
+    const { total, pending } = playerCurrentTotal(p.id);
+    return { id:p.id, name:p.name, total, pending };
+  }).sort((a,b)=> b.total - a.total);
+}
+
+/* ---------- excel export (admin only) ---------- */
+
+function buildWeekExportRows(weekNum){
+  const week = state.weeks[weekNum];
+  const rows = [];
+  if(!week) return rows;
+  state.players.forEach(p=>{
+    const playerPicks = (state.picks[weekNum] && state.picks[weekNum][p.id]) || [];
+    if(playerPicks.length === 0){
+      rows.push({
+        Player: p.name,
+        Game: '',
+        'Team Picked': '',
+        Wager: '',
+        Result: week.locked ? 'No picks submitted' : 'No picks yet',
+        'Points': week.locked ? -NO_PICK_PENALTY : ''
+      });
+      return;
+    }
+    playerPicks.forEach(pk=>{
+      const g = (week.games||[]).find(x=>x.id===pk.gameId);
+      if(!g){ return; }
+      const res = gameResult(g);
+      const teamName = pk.team==='A' ? g.teamA : g.teamB;
+      let resultLabel = 'Pending';
+      let points = '';
+      if(res === 'push'){ resultLabel = 'Push'; points = 0; }
+      else if(res !== null){
+        const won = res === pk.team;
+        resultLabel = won ? 'Win' : 'Loss';
+        points = won ? pk.wager : -pk.wager;
+      }
+      rows.push({
+        Player: p.name,
+        Game: `${g.teamA} vs ${g.teamB}`,
+        'Team Picked': teamName,
+        Wager: pk.wager,
+        Result: resultLabel,
+        'Points': points
+      });
+    });
+  });
+  return rows;
+}
+
+function downloadWeekExcel(weekNum){
+  if(typeof XLSX === 'undefined'){
+    showFlash('The Excel export library did not load — check your connection and try again.', 'err');
+    return;
+  }
+  const rows = buildWeekExportRows(weekNum);
+  if(rows.length === 0){
+    showFlash(`No picks data to export for week ${weekNum}.`, 'err');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, `Week ${weekNum}`);
+  XLSX.writeFile(wb, `pool-week-${weekNum}-picks.xlsx`);
+}
+
+function downloadSeasonExcel(){
+  if(typeof XLSX === 'undefined'){
+    showFlash('The Excel export library did not load — check your connection and try again.', 'err');
+    return;
+  }
+  const weekNums = sortedWeekNums();
+  const weeksWithData = weekNums.filter(w => buildWeekExportRows(w).length > 0);
+  if(weeksWithData.length === 0){
+    showFlash('No picks data to export yet.', 'err');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  weeksWithData.forEach(w=>{
+    const rows = buildWeekExportRows(w);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, `Week ${w}`);
+  });
+  XLSX.writeFile(wb, `pool-season-picks.xlsx`);
+}
+
+function el(html){ const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+
+function render(){
+  renderTabs();
+  const c = document.getElementById('content');
+  if(!state.loaded){ c.innerHTML = '<p class="empty-note">Loading pool data...</p>'; return; }
+  if(state.tab === 'standings') c.innerHTML = renderStandings();
+  else if(state.tab === 'picks') c.innerHTML = renderPicks();
+  else if(state.tab === 'reveal') c.innerHTML = renderAllPicks();
+  else if(state.tab === 'admin') c.innerHTML = renderAdmin();
+  if(flashMsg){
+    const box = document.getElementById('flash-box');
+    if(box){ box.style.display='block'; box.className = 'msg ' + flashMsg.type; box.textContent = flashMsg.text; }
+  }
+}
+
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  const defs = [['standings','Standings'],['picks','Make Picks'],['reveal','All Picks'],['admin','Commissioner']];
+  tabs.innerHTML = '';
+  defs.forEach(([id,label])=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (state.tab===id ? ' active' : '');
+    b.textContent = label;
+    b.onclick = ()=>{ state.tab = id; flashMsg=null; render(); };
+    tabs.appendChild(b);
+  });
+}
+
+let revealWeek = null;
+
+function renderAllPicks(){
+  let body = `<h2 class="section-title">All picks</h2>
+  <p class="section-desc">Picks stay private while a week is open &mdash; once the commissioner locks a week, everyone's picks for that week are revealed here.</p>`;
+
+  const lockedWeeks = sortedWeekNums().filter(w=>state.weeks[w] && state.weeks[w].locked);
+
+  if(lockedWeeks.length === 0){
+    body += `<div class="card"><p class="empty-note">No weeks have been locked yet. Check back once the commissioner locks a week's picks.</p></div>`;
+    return body;
+  }
+
+  if(revealWeek === null || !lockedWeeks.includes(revealWeek)) revealWeek = lockedWeeks[lockedWeeks.length-1];
+
+  body += `<div class="week-picker">
+    <label class="field-label" style="margin:0;">Week</label>
+    <select id="reveal-week-select">
+      ${lockedWeeks.map(w=>`<option value="${w}" ${w===revealWeek?'selected':''}>Week ${w}</option>`).join('')}
+    </select>
+  </div>`;
+
+  const week = state.weeks[revealWeek];
+  const weekPicks = state.picks[revealWeek] || {};
+  const playersWithPicks = state.players.filter(p=> weekPicks[p.id] && weekPicks[p.id].length>0);
+  const playersWithout = state.players.filter(p=> !weekPicks[p.id] || weekPicks[p.id].length===0);
+
+  if(playersWithPicks.length === 0){
+    body += `<div class="card"><p class="empty-note">No one submitted picks for week ${revealWeek}.</p></div>`;
+  }
+
+  playersWithPicks.forEach(p=>{
+    const picksArr = weekPicks[p.id];
+    let weekTotal = 0;
+    body += `<div class="card"><h3>${escapeHtml(p.name)}</h3>`;
+    picksArr.forEach(pk=>{
+      const g = (week.games||[]).find(x=>x.id===pk.gameId);
+      if(!g) return;
+      const res = gameResult(g);
+      const teamName = pk.team==='A' ? g.teamA : g.teamB;
+      let tag = `<span class="result-tag pending">pending</span>`;
+      if(res==='push') tag = `<span class="result-tag push">push</span>`;
+      else if(res!==null){
+        const won = res===pk.team;
+        tag = won ? `<span class="result-tag win">+${pk.wager}</span>` : `<span class="result-tag loss">-${pk.wager}</span>`;
+        weekTotal += won ? pk.wager : -pk.wager;
+      }
+      body += `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--line);">
+        <div>
+          <div style="font-weight:600; font-size:13.5px;">${escapeHtml(teamName)}</div>
+          <div style="font-size:12px; color:var(--muted);">${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)} &middot; wagered ${pk.wager}</div>
+        </div>
+        ${tag}
+      </div>`;
+    });
+    body += `<div style="display:flex; justify-content:space-between; padding-top:8px; font-weight:600; font-size:13.5px;">
+      <span>Week net</span><span>${weekTotal>=0?'+':''}${weekTotal} pts</span>
+    </div></div>`;
+  });
+
+  if(playersWithout.length > 0){
+    body += `<div class="card"><h3>No picks submitted</h3><p class="empty-note" style="margin:0;">${playersWithout.map(p=>escapeHtml(p.name)).join(', ')} &mdash; automatic -${NO_PICK_PENALTY} point penalty.</p></div>`;
+  }
+
+  return body;
+}
+
+function renderStandings(){
+  const published = state.publishedStandings && state.publishedStandings.current ? state.publishedStandings.current : null;
+  const previousSnapshot = state.publishedStandings && state.publishedStandings.previous ? state.publishedStandings.previous.snapshot : null;
+
+  let body = `<h2 class="section-title">Standings</h2>
+  <p class="section-desc">Every player starts at ${STARTING_POINTS} points. The commissioner publishes updated standings periodically &mdash; this is the most recent published snapshot.</p>`;
+
+  if(!published || !published.snapshot || published.snapshot.length === 0){
+    body += `<div class="card"><p class="empty-note">Standings haven't been published yet. Check back after the commissioner publishes them.</p></div>`;
+  } else {
+    body += `<div class="scoreboard">
+      <div class="board-row head"><div class="rank">#</div><div class="pname">Player</div><div class="ppoints">Points</div><div class="pdelta"></div><div class="pstatus"></div></div>`;
+    published.snapshot.forEach((r,i)=>{
+      const out = r.total <= 0;
+      const statusHtml = out ? `<span class="pstatus out">OUT</span>` : (r.pending ? `<span class="pstatus pending">pending</span>` : `<span class="pstatus"></span>`);
+      let deltaHtml = `<div class="pdelta"></div>`;
+      if(previousSnapshot){
+        const prev = previousSnapshot.find(p=>p.id===r.id);
+        if(prev){
+          const diff = r.total - prev.total;
+          if(diff > 0){
+            deltaHtml = `<div class="pdelta up"><svg viewBox="0 0 10 10"><path d="M5 1 L9 8 L1 8 Z" fill="currentColor"/></svg>+${diff.toLocaleString()}</div>`;
+          } else if(diff < 0){
+            deltaHtml = `<div class="pdelta down"><svg viewBox="0 0 10 10"><path d="M5 9 L1 2 L9 2 Z" fill="currentColor"/></svg>${diff.toLocaleString()}</div>`;
+          } else {
+            deltaHtml = `<div class="pdelta" style="color:var(--muted);">&mdash;</div>`;
+          }
+        }
+      }
+      body += `<div class="board-row">
+        <div class="rank">${i===0?'&#129351;':i===1?'&#129352;':i===2?'&#129353;':(i+1)}</div>
+        <div class="pname">${escapeHtml(r.name)}</div>
+        <div class="ppoints">${r.total.toLocaleString()}</div>
+        ${deltaHtml}
+        ${statusHtml}
+      </div>`;
+    });
+    body += `</div>`;
+    body += `<p class="empty-note" style="margin-top:-6px;">Published ${new Date(published.publishedAt).toLocaleString()}. The green/red number shows the change since the previous publish. "pending" means that player had a week awaiting final scores when this was published.</p>`;
+  }
+
+  body += `<details style="margin-top:10px;">
+    <summary>Pool rules</summary>
+    <div class="rules-box">
+      <b>$200</b> entry fee for the season. Each player starts with <b>${STARTING_POINTS}</b> points &mdash; hit zero and you're out.<br>
+      Each week, pick the winner against the spread for <b>3 games</b> (no games Wednesday through Saturday).<br>
+      Wager <b>50, 100, 150 or 200</b> points per game &mdash; minimum 150/week, maximum 600/week, and never more than you currently have.<br>
+      Picks are due <b>midnight Pacific, Saturday</b>. Miss the deadline or skip a week and you lose <b>300 points</b> automatically.<br>
+      Regular season only, all ${NUM_WEEKS} weeks. Top 3 at season's end split the pot: <b>1st &ndash; 60%, 2nd &ndash; 30%, 3rd &ndash; 10%</b>.
+    </div>
+  </details>`;
+  return body;
+}
+
+function renderPicks(){
+  let body = `<h2 class="section-title">Make picks</h2>
+  <p class="section-desc">Verify your PIN, pick a week, then select any 3 games and choose your side and wager for each.</p>
+  <div id="flash-box" class="msg" style="display:none;"></div>`;
+
+  if(state.players.length === 0){
+    body += `<div class="card"><p class="empty-note">No players have been added yet. Ask the commissioner to add you from the Admin tab.</p></div>`;
+    return body;
+  }
+
+  const myPlayer = identity.verified ? state.players.find(p=>p.id === identity.playerId) : null;
+
+  if(!myPlayer){
+    body += `<div class="card">
+      <label class="field-label">Who are you?</label>
+      <select id="player-select-pin">
+        <option value="">Select your name...</option>
+        ${state.players.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+      </select>
+      <label class="field-label" style="margin-top:10px;">Your PIN</label>
+      <input type="text" id="pin-input" maxlength="4" inputmode="numeric" placeholder="4-digit PIN" style="max-width:160px;">
+      <div style="margin-top:12px;"><button class="btn amber" id="verify-pin-btn">Unlock my picks</button></div>
+      <p class="empty-note" style="margin:10px 0 0;">Only your PIN unlocks your own picks. Ask the commissioner if you don't know yours.</p>
+    </div>`;
+    return body;
+  }
+
+  body += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+    <div><span style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Picking as</span><br>
+    <span style="font-weight:600; font-size:16px;">${escapeHtml(myPlayer.name)}</span></div>
+    <button class="btn secondary small" id="switch-player-btn">Not you? Switch</button>
+  </div>`;
+
+  const weekNums = sortedWeekNums();
+  if(weekNums.length === 0){
+    body += `<p class="empty-note">No weeks have been set up yet. Check back once the commissioner adds this week's games.</p>`;
+    return body;
+  }
+
+  if(draft.week === null || !state.weeks[draft.week]) draft.week = weekNums[weekNums.length-1];
+  const week = state.weeks[draft.week];
+  const games = week.games || [];
+  const existingPicks = (state.picks[draft.week] && state.picks[draft.week][myPlayer.id]) || [];
+  const balance = playerBalanceThroughWeek(myPlayer.id, draft.week);
+
+  body += `<div class="week-picker">
+    <label class="field-label" style="margin:0;">Week</label>
+    <select id="week-select">
+      ${weekNums.map(w=>`<option value="${w}" ${w===draft.week?'selected':''}>Week ${w}${state.weeks[w].locked?' (locked)':''}</option>`).join('')}
+    </select>
+    ${week.locked ? '<span class="badge locked">Picks locked</span>' : '<span class="badge open">Picks open</span>'}
+    <span style="margin-left:auto; font-size:13px; color:var(--muted);">Balance entering week ${draft.week}: <b style="color:var(--ink);">${balance.toLocaleString()}</b> pts</span>
+  </div>`;
+
+  if(games.length === 0){
+    body += `<p class="empty-note">No games have been added for week ${draft.week} yet.</p>`;
+    return body;
+  }
+
+  if(draft.playerId !== myPlayer.id || draft.forWeek !== draft.week){
+    draft.playerId = myPlayer.id;
+    draft.forWeek = draft.week;
+    draft.selections = {};
+    draft.editing = false;
+  }
+
+  if(week.locked){
+    if(existingPicks.length > 0){
+      body += renderSubmittedPicks(week, existingPicks, draft.week, false);
+    } else {
+      body += `<div class="card"><p class="empty-note">Picks for week ${draft.week} are locked and you didn't submit any &mdash; that's an automatic -${NO_PICK_PENALTY} point penalty per the rules.</p></div>`;
+    }
+    return body;
+  }
+
+  if(existingPicks.length === 0){
+    const hrs = hoursUntilDeadline(week.deadline);
+    if(hrs !== null && hrs > 0 && hrs <= 12){
+      body += `<div class="msg warn">You haven't submitted picks for week ${draft.week} yet &mdash; ${formatCountdown(hrs)} left before picks lock and you take the automatic -${NO_PICK_PENALTY} point penalty.</div>`;
+    }
+  }
+
+  if(existingPicks.length > 0 && !draft.editing){
+    body += renderSubmittedPicks(week, existingPicks, draft.week, true);
+    return body;
+  }
+
+  // editing an existing submission: pre-fill from what's on file
+  if(draft.editing && Object.keys(draft.selections).length === 0 && existingPicks.length > 0){
+    existingPicks.forEach(p=>{ draft.selections[p.gameId] = { team: p.team, wager: p.wager }; });
+  }
+
+  const selectedIds = Object.keys(draft.selections);
+  let sum = 0;
+  selectedIds.forEach(gid=>{ sum += draft.selections[gid].wager || 0; });
+
+  games.forEach(g=>{
+    const sel = draft.selections[g.id];
+    const isSelected = !!sel;
+    body += `<div class="game-card ${isSelected?'selected':''}">
+      <div class="game-top">
+        <div class="game-teams">${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)}</div>
+        <label class="checkbox-row"><input type="checkbox" data-game="${g.id}" class="include-cb" ${isSelected?'checked':''} ${(!isSelected && selectedIds.length>=3)?'disabled':''}> include</label>
+      </div>
+      <div class="team-pick-row">
+        <div class="team-btn ${sel && sel.team==='A' ? 'chosen':''}" data-game="${g.id}" data-team="A">
+          ${escapeHtml(g.teamA)}
+          <span class="spread-tag">${spreadLabel(g.spread)}</span>
+        </div>
+        <div class="team-btn ${sel && sel.team==='B' ? 'chosen':''}" data-game="${g.id}" data-team="B">
+          ${escapeHtml(g.teamB)}
+          <span class="spread-tag">${spreadLabel(-g.spread)}</span>
+        </div>
+      </div>
+      ${isSelected ? `<div style="margin-top:10px; max-width:160px;">
+        <label class="field-label">Wager</label>
+        <select class="wager-select" data-game="${g.id}">
+          <option value="">Choose...</option>
+          ${WAGER_OPTIONS.map(w=>`<option value="${w}" ${sel.wager===w?'selected':''}>${w} points</option>`).join('')}
+        </select>
+      </div>` : ''}
+    </div>`;
+  });
+
+  const min=150, max=600;
+  const allComplete = selectedIds.length===3 && selectedIds.every(gid=>draft.selections[gid].team && draft.selections[gid].wager);
+  const withinRange = sum>=min && sum<=max;
+  const withinBalance = sum<=balance;
+  const canSubmit = allComplete && withinRange && withinBalance;
+
+  let sumClass = 'amt';
+  if(selectedIds.length===3 && (!withinRange || !withinBalance)) sumClass += ' bad';
+  else if(canSubmit) sumClass += ' good';
+
+  body += `<div class="wager-sum">
+    <div>
+      <div style="font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Total wagered (need 3 games, 150&ndash;600 pts)</div>
+      <div class="${sumClass}">${sum} pts</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      ${draft.editing ? `<button class="btn secondary" id="cancel-edit-btn">Cancel</button>` : ''}
+      <button class="btn amber" id="submit-picks-btn" ${canSubmit?'':'disabled'}>${draft.editing ? 'Update picks' : 'Submit picks'}</button>
+    </div>
+  </div>`;
+
+  if(selectedIds.length===3 && !withinBalance){
+    body += `<p class="empty-note" style="color:var(--red);">You only have ${balance} points available for week ${draft.week} &mdash; lower your wagers.</p>`;
+  }
+
+  return body;
+}
+
+function spreadLabel(spread){
+  const n = Number(spread);
+  if(n === 0) return 'even';
+  return n < 0 ? `favored by ${Math.abs(n)}` : `+${n} underdog`;
+}
+
+function renderSubmittedPicks(week, picksArr, weekNum, editable){
+  let body = `<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+      <h3 style="margin:0;">Your picks for week ${weekNum}</h3>
+      ${editable ? `<button class="btn secondary small" id="edit-picks-btn">Edit picks</button>` : ''}
+    </div>`;
+  let total = 0;
+  picksArr.forEach(p=>{
+    const g = (week.games||[]).find(x=>x.id===p.gameId);
+    if(!g) return;
+    const res = gameResult(g);
+    const teamName = p.team==='A' ? g.teamA : g.teamB;
+    let tag = `<span class="result-tag pending">pending</span>`;
+    if(res==='push') tag = `<span class="result-tag push">push</span>`;
+    else if(res!==null){
+      const won = res===p.team;
+      tag = won ? `<span class="result-tag win">+${p.wager}</span>` : `<span class="result-tag loss">-${p.wager}</span>`;
+      total += won ? p.wager : -p.wager;
+    }
+    body += `<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line);">
+      <div>
+        <div style="font-weight:600; font-size:13.5px;">${escapeHtml(teamName)}</div>
+        <div style="font-size:12px; color:var(--muted);">${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)} &middot; wagered ${p.wager}</div>
+      </div>
+      ${tag}
+    </div>`;
+  });
+  body += `<div style="display:flex; justify-content:space-between; padding-top:10px; font-weight:600; font-size:14px;">
+    <span>Week net</span><span>${total>=0?'+':''}${total} pts</span>
+  </div></div>`;
+  body += editable
+    ? `<p class="empty-note">You can edit these picks until the commissioner locks week ${weekNum}.</p>`
+    : `<p class="empty-note">Picks are locked for week ${weekNum}. Contact the commissioner if you need a correction.</p>`;
+  return body;
+}
+
+function renderAdmin(){
+  if(!adminAuth.verified){
+    let gate = `<h2 class="section-title">Commissioner</h2>
+    <p class="section-desc">This page is for the commissioner only. For security, it re-locks every time this page is opened or refreshed &mdash; even for you.</p>
+    <div id="flash-box" class="msg" style="display:none;"></div>`;
+    gate += `<div class="card">
+      <h3>Commissioner login</h3>
+      <label class="field-label">Username</label>
+      <input type="text" id="admin-username-input" autocapitalize="off" autocomplete="off" placeholder="Username" style="max-width:240px;">
+      <label class="field-label" style="margin-top:10px;">Password</label>
+      <input type="password" id="admin-password-input" autocapitalize="off" autocomplete="off" placeholder="Password" style="max-width:240px;">
+      <div style="margin-top:12px;"><button class="btn amber" id="admin-login-submit">Unlock admin</button></div>
+      <p class="empty-note" style="margin:10px 0 0;">Both fields are case-sensitive.</p>
+    </div>`;
+    return gate;
+  }
+
+  let body = `<div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h2 class="section-title">Commissioner</h2>
+      <p class="section-desc">Manage players, set up each week's games and spreads, lock picks, and enter final scores.</p>
+    </div>
+    <button class="btn secondary small" id="admin-lock-btn">Lock admin</button>
+  </div>
+  <div id="flash-box" class="msg" style="display:none;"></div>`;
+
+  // players
+  body += `<div class="card">
+    <h3>Players</h3>
+    <div class="row" style="margin-bottom:10px;">
+      <div><input type="text" id="new-player-name" placeholder="Player name"></div>
+      <div style="flex:0 0 auto;"><button class="btn" id="add-player-btn">Add player</button></div>
+    </div>`;
+  if(state.players.length === 0){
+    body += `<p class="empty-note">No players yet.</p>`;
+  } else {
+    body += `<table class="plain"><thead><tr><th>Name</th><th>PIN</th><th></th></tr></thead><tbody>`;
+    state.players.forEach(p=>{
+      body += `<tr>
+        <td>${escapeHtml(p.name)}</td>
+        <td style="font-variant-numeric:tabular-nums; letter-spacing:0.08em;">${escapeHtml(p.pin || '')}</td>
+        <td style="text-align:right; white-space:nowrap;">
+          <button class="btn secondary small regen-pin-btn" data-id="${p.id}">New PIN</button>
+          <button class="inline-x remove-player-btn" data-id="${p.id}" title="Remove player">&times;</button>
+        </td>
+      </tr>`;
+    });
+    body += `</tbody></table>
+    <p class="empty-note" style="margin-bottom:0;">Share each PIN with that player privately &mdash; it's what they use to unlock their own picks on the Make Picks tab.</p>`;
+  }
+  body += `</div>`;
+
+  // season-wide export
+  body += `<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="margin:0 0 2px;">Export picks</h3>
+        <p class="empty-note" style="margin:0;">Every player's picks, results, and points for every week &mdash; one sheet per week, admin only.</p>
+      </div>
+      <button class="btn secondary" id="export-season-btn">Download full season (Excel)</button>
+    </div>
+  </div>`;
+
+  // standings — live for admin only, published on demand
+  const live = computeLiveStandings();
+  body += `<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 style="margin:0;">Standings</h3>
+      <button class="btn amber small" id="publish-standings-btn">Publish to league</button>
+    </div>
+    <p class="empty-note" style="margin-top:0;">${state.publishedStandings && state.publishedStandings.current ? `Players are currently seeing what you last published on ${new Date(state.publishedStandings.current.publishedAt).toLocaleString()}. Live totals below may differ.` : `Nothing published yet &mdash; players won't see standings until you publish.`}</p>`;
+  if(live.length === 0){
+    body += `<p class="empty-note">No players yet.</p>`;
+  } else {
+    body += `<table class="plain"><thead><tr><th>#</th><th>Player</th><th style="text-align:right;">Live points</th></tr></thead><tbody>`;
+    live.forEach((r,i)=>{
+      body += `<tr><td>${i+1}</td><td>${escapeHtml(r.name)}</td><td style="text-align:right; font-variant-numeric:tabular-nums;">${r.total.toLocaleString()}${r.pending?' <span style="color:var(--muted); font-size:11px;">(pending)</span>':''}</td></tr>`;
+    });
+    body += `</tbody></table>`;
+  }
+  body += `</div>`;
+
+  // week selector
+  body += `<div class="week-picker">
+    <label class="field-label" style="margin:0;">Manage week</label>
+    <select id="admin-week-select">
+      ${Array.from({length:NUM_WEEKS},(_,i)=>i+1).map(w=>`<option value="${w}" ${w===adminNewWeek?'selected':''}>Week ${w}</option>`).join('')}
+    </select>
+  </div>`;
+
+  const week = state.weeks[adminNewWeek] || { games: [], locked:false };
+
+  body += `<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 style="margin:0;">Week ${adminNewWeek} games</h3>
+      ${week.locked ? '<span class="badge locked">Locked</span>' : '<span class="badge open">Open</span>'}
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <div><label class="field-label">Home Team</label><input type="text" id="game-teamA" placeholder="e.g. Rams" value="${escapeHtml(adminNewGame.teamA)}"></div>
+      <div><label class="field-label">Away Team</label><input type="text" id="game-teamB" placeholder="e.g. 49ers" value="${escapeHtml(adminNewGame.teamB)}"></div>
+      <div style="max-width:160px;"><label class="field-label">Spread (Home Team)</label><input type="number" step="0.5" id="game-spread" placeholder="-3.5" value="${escapeHtml(String(adminNewGame.spread))}"></div>
+    </div>
+    <p class="empty-note" style="margin:2px 0 10px;">Negative = Home Team favored by that many. Positive = Home Team getting that many points.</p>
+    <button class="btn secondary" id="add-game-btn">Add game to week ${adminNewWeek}</button>
+    <hr class="divider">`;
+
+  if(week.games.length === 0){
+    body += `<p class="empty-note">No games added for this week yet.</p>`;
+  } else {
+    week.games.forEach(g=>{
+      const res = gameResult(g);
+      body += `<div class="game-card">
+        <div class="game-top">
+          <div class="game-teams">${escapeHtml(g.teamA)} <span style="color:var(--muted); font-weight:400;">(${spreadLabel(g.spread)})</span> vs ${escapeHtml(g.teamB)}</div>
+          <button class="inline-x remove-game-btn" data-id="${g.id}" title="Remove game">&times;</button>
+        </div>
+        <div class="row">
+          <div><label class="field-label">${escapeHtml(g.teamA)} score</label><input type="number" class="score-input" data-id="${g.id}" data-side="A" value="${g.scoreA===null||g.scoreA===undefined?'':g.scoreA}" placeholder="--"></div>
+          <div><label class="field-label">${escapeHtml(g.teamB)} score</label><input type="number" class="score-input" data-id="${g.id}" data-side="B" value="${g.scoreB===null||g.scoreB===undefined?'':g.scoreB}" placeholder="--"></div>
+          <div style="display:flex; align-items:flex-end;">
+            ${res===null ? '<span class="result-tag pending">awaiting score</span>' : res==='push' ? '<span class="result-tag push">push</span>' : `<span class="result-tag win">${res==='A'?g.teamA:g.teamB} covers</span>`}
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  body += `<hr class="divider">
+    <div class="row" style="margin-bottom:10px;">
+      <div><label class="field-label">Auto-lock deadline (Pacific time)</label><input type="datetime-local" id="week-deadline-input" value="${week.deadline || ''}"></div>
+      <div style="flex:0 0 auto; display:flex; align-items:flex-end;"><button class="btn secondary" id="save-deadline-btn">Save deadline</button></div>
+    </div>
+    <p class="empty-note" style="margin-top:0;">${week.deadline ? `Picks will auto-lock once it's ${formatPacificDisplay(week.deadline)} Pacific &mdash; as long as someone has this page open at that moment. You can also lock early below.` : `No auto-lock deadline set yet. Enter the Saturday midnight Pacific cutoff, or just lock manually below when you're ready.`}</p>
+    <div style="display:flex; gap:10px;">
+      ${week.locked
+        ? `<button class="btn secondary" id="unlock-week-btn">Unlock week ${adminNewWeek}</button>`
+        : `<button class="btn amber" id="lock-week-btn">Lock week ${adminNewWeek} picks now</button>`}
+    </div>
+    <p class="empty-note">Locking a week stops any further pick edits, applies the automatic -${NO_PICK_PENALTY} point penalty to anyone who hasn't submitted picks, and reveals that week's picks to everyone on the All Picks tab.</p>
+  </div>`;
+
+  // who has / hasn't picked — full detail, admin-only, visible any time (even before lock)
+  if(state.players.length > 0 && week.games.length > 0){
+    body += `<div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+        <h3 style="margin:0;">Week ${adminNewWeek} picks</h3>
+        <button class="btn secondary small" id="export-week-btn">Download Excel</button>
+      </div>
+    <p class="empty-note" style="margin-top:0;">Only visible to you. Players can't see anyone else's picks until you lock this week &mdash; then they show up on the All Picks tab.</p>`;
+    state.players.forEach(p=>{
+      const picksArr = (state.picks[adminNewWeek] && state.picks[adminNewWeek][p.id]) || [];
+      const has = picksArr.length > 0;
+      body += `<div style="border-bottom:1px solid var(--line); padding:8px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:600; font-size:13.5px;">${escapeHtml(p.name)}</span>
+          ${has ? '<span class="result-tag win">submitted</span>' : (week.locked ? '<span class="result-tag loss">-300 penalty</span>' : '<span class="result-tag pending">no picks yet</span>')}
+        </div>`;
+      if(has){
+        picksArr.forEach(pk=>{
+          const g = (week.games||[]).find(x=>x.id===pk.gameId);
+          if(!g) return;
+          const teamName = pk.team==='A' ? g.teamA : g.teamB;
+          body += `<div style="font-size:12px; color:var(--muted); padding:3px 0 0 4px;">${escapeHtml(teamName)} (${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)}) &middot; ${pk.wager} pts</div>`;
+        });
+      }
+      body += `</div>`;
+    });
+    body += `</div>`;
+  }
+
+  return body;
+}
+
+function escapeHtml(s){
+  return String(s===undefined||s===null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function showFlash(text, type){
+  flashMsg = { text, type: type||'ok' };
+  render();
+  setTimeout(()=>{ flashMsg=null; const b=document.getElementById('flash-box'); if(b) b.style.display='none'; }, 3500);
+}
+
+/* ---------- event delegation ---------- */
+
+document.getElementById('content').addEventListener('click', async (e)=>{
+  const t = e.target;
+
+  if(t.id === 'add-player-btn'){
+    const input = document.getElementById('new-player-name');
+    const name = input.value.trim();
+    if(!name) return;
+    if(state.players.some(p=>p.name.toLowerCase()===name.toLowerCase())){
+      showFlash('A player with that name already exists.', 'err'); return;
+    }
+    const pin = genPin();
+    const newPlayers = [...state.players, { id: uid(), name, pin }];
+    const ok = await saveKey('players', newPlayers, true);
+    if(!ok){ showFlash('Could not add the player — the save failed. Check your connection and try again.', 'err'); return; }
+    state.players = newPlayers;
+    showFlash(`Added ${name} — their PIN is ${pin}. Share it with them privately.`, 'ok');
+    input.value = '';
+    return;
+  }
+
+  if(t.classList.contains('regen-pin-btn')){
+    const id = t.dataset.id;
+    const player = state.players.find(p=>p.id===id);
+    if(!player) return;
+    if(!confirm(`Generate a new PIN for ${player.name}? Their old PIN will stop working.`)) return;
+    const oldPin = player.pin;
+    player.pin = genPin();
+    const ok = await saveKey('players', state.players, true);
+    if(!ok){ player.pin = oldPin; showFlash('Could not save the new PIN — try again.', 'err'); return; }
+    showFlash(`New PIN for ${player.name}: ${player.pin}`, 'ok');
+    return;
+  }
+
+  if(t.id === 'verify-pin-btn'){
+    const sel = document.getElementById('player-select-pin');
+    const pinEl = document.getElementById('pin-input');
+    const pid = sel.value;
+    const pin = pinEl.value.trim();
+    if(!pid){ showFlash('Select your name first.', 'err'); return; }
+    const player = state.players.find(p=>p.id===pid);
+    if(!player || !pin || player.pin !== pin){ showFlash('Incorrect PIN.', 'err'); return; }
+    identity = { playerId: pid, verified: true };
+    draft.selections = {};
+    showFlash(`Welcome, ${player.name}.`, 'ok');
+    return;
+  }
+
+  if(t.id === 'switch-player-btn'){
+    identity = { playerId: null, verified: false };
+    draft.selections = {};
+    render();
+    return;
+  }
+
+  if(t.id === 'admin-login-submit'){
+    const user = document.getElementById('admin-username-input').value;
+    const pass = document.getElementById('admin-password-input').value;
+    if(user !== ADMIN_USERNAME || pass !== ADMIN_PASSWORD){ showFlash('Incorrect username or password.', 'err'); return; }
+    adminAuth.verified = true;
+    render();
+    return;
+  }
+
+  if(t.id === 'admin-lock-btn'){
+    adminAuth.verified = false;
+    render();
+    return;
+  }
+
+  if(t.classList.contains('remove-player-btn')){
+    const id = t.dataset.id;
+    if(!confirm('Remove this player? Their picks history stays but they will drop off standings.')) return;
+    const originalPlayers = state.players;
+    const newPlayers = state.players.filter(p=>p.id!==id);
+    const ok = await saveKey('players', newPlayers, true);
+    if(!ok){ showFlash('Could not remove the player — try again.', 'err'); return; }
+    state.players = newPlayers;
+    render();
+    return;
+  }
+
+  if(t.id === 'add-game-btn'){
+    const teamA = document.getElementById('game-teamA').value.trim();
+    const teamB = document.getElementById('game-teamB').value.trim();
+    const spreadRaw = document.getElementById('game-spread').value;
+    if(!teamA || !teamB || spreadRaw===''){ showFlash('Fill in both teams and a spread.', 'err'); return; }
+    const spread = Number(spreadRaw);
+    const newWeeks = JSON.parse(JSON.stringify(state.weeks));
+    if(!newWeeks[adminNewWeek]) newWeeks[adminNewWeek] = { games:[], locked:false };
+    newWeeks[adminNewWeek].games.push({ id: uid(), teamA, teamB, spread, scoreA:null, scoreB:null });
+    const ok = await saveKey('weeks', newWeeks, true);
+    if(!ok){ showFlash('Could not add the game — the save failed. Try again.', 'err'); return; }
+    state.weeks = newWeeks;
+    adminNewGame = { teamA:'', teamB:'', spread:'' };
+    render();
+    return;
+  }
+
+  if(t.classList.contains('remove-game-btn')){
+    const id = t.dataset.id;
+    if(!confirm('Remove this game? Any picks referencing it will no longer score.')) return;
+    const newWeeks = JSON.parse(JSON.stringify(state.weeks));
+    newWeeks[adminNewWeek].games = newWeeks[adminNewWeek].games.filter(g=>g.id!==id);
+    const ok = await saveKey('weeks', newWeeks, true);
+    if(!ok){ showFlash('Could not remove the game — try again.', 'err'); return; }
+    state.weeks = newWeeks;
+    render();
+    return;
+  }
+
+  if(t.id === 'lock-week-btn'){
+    if(!state.weeks[adminNewWeek]) state.weeks[adminNewWeek] = { games:[], locked:false };
+    const newWeeksLock = JSON.parse(JSON.stringify(state.weeks));
+    newWeeksLock[adminNewWeek].locked = true;
+    const okLock = await saveKey('weeks', newWeeksLock, true);
+    if(!okLock){ showFlash('Could not lock the week — the save failed. Try again.', 'err'); return; }
+    state.weeks = newWeeksLock;
+    showFlash(`Week ${adminNewWeek} picks locked.`, 'ok');
+    return;
+  }
+  if(t.id === 'unlock-week-btn'){
+    if(!state.weeks[adminNewWeek]) state.weeks[adminNewWeek] = { games:[], locked:false };
+    const newWeeksUnlock = JSON.parse(JSON.stringify(state.weeks));
+    newWeeksUnlock[adminNewWeek].locked = false;
+    const okUnlock = await saveKey('weeks', newWeeksUnlock, true);
+    if(!okUnlock){ showFlash('Could not unlock the week — the save failed. Try again.', 'err'); return; }
+    state.weeks = newWeeksUnlock;
+    showFlash(`Week ${adminNewWeek} picks unlocked.`, 'ok');
+    return;
+  }
+
+  if(t.id === 'save-deadline-btn'){
+    const val = document.getElementById('week-deadline-input').value;
+    if(!state.weeks[adminNewWeek]) state.weeks[adminNewWeek] = { games:[], locked:false };
+    const newWeeksDL = JSON.parse(JSON.stringify(state.weeks));
+    newWeeksDL[adminNewWeek].deadline = val || null;
+    const okDL = await saveKey('weeks', newWeeksDL, true);
+    if(!okDL){ showFlash('Could not save the deadline — try again.', 'err'); return; }
+    state.weeks = newWeeksDL;
+    showFlash(val ? `Auto-lock deadline set for week ${adminNewWeek}.` : `Auto-lock deadline cleared for week ${adminNewWeek}.`, 'ok');
+    return;
+  }
+
+  if(t.id === 'export-week-btn'){
+    downloadWeekExcel(adminNewWeek);
+    return;
+  }
+
+  if(t.id === 'export-season-btn'){
+    downloadSeasonExcel();
+    return;
+  }
+
+  if(t.id === 'publish-standings-btn'){
+    const snapshot = computeLiveStandings();
+    const currentEntry = { snapshot, publishedAt: new Date().toISOString() };
+    const newPublished = {
+      current: currentEntry,
+      previous: (state.publishedStandings && state.publishedStandings.current) ? state.publishedStandings.current : null
+    };
+    const okPub = await saveKey('published-standings', newPublished, true);
+    if(!okPub){ showFlash('Could not publish standings — the save failed. Try again.', 'err'); return; }
+    state.publishedStandings = newPublished;
+    showFlash('Standings published to the league.', 'ok');
+    return;
+  }
+
+  if(t.id === 'submit-picks-btn'){
+    if(state.weeks[draft.week] && state.weeks[draft.week].locked){
+      draft.editing = false;
+      showFlash(`Week ${draft.week} just locked — picks can no longer be changed.`, 'err');
+      return;
+    }
+    const wasEdit = draft.editing;
+    const gids = Object.keys(draft.selections);
+    const picksToSave = gids.map(gid=>({ gameId: gid, team: draft.selections[gid].team, wager: draft.selections[gid].wager }));
+    const newPicks = JSON.parse(JSON.stringify(state.picks));
+    if(!newPicks[draft.week]) newPicks[draft.week] = {};
+    newPicks[draft.week][draft.playerId] = picksToSave;
+    const okPicks = await saveKey('picks', newPicks, true);
+    if(!okPicks){ showFlash('Could not save your picks — the save failed. Try again before leaving this page.', 'err'); return; }
+    state.picks = newPicks;
+    draft.selections = {};
+    draft.editing = false;
+    showFlash(wasEdit ? 'Picks updated!' : 'Picks submitted!', 'ok');
+    return;
+  }
+
+  if(t.id === 'edit-picks-btn'){
+    draft.editing = true;
+    draft.selections = {};
+    render();
+    return;
+  }
+
+  if(t.id === 'cancel-edit-btn'){
+    draft.editing = false;
+    draft.selections = {};
+    render();
+    return;
+  }
+
+  if(t.classList.contains('team-btn')){
+    const gid = t.dataset.game, team = t.dataset.team;
+    if(!draft.selections[gid]) return;
+    draft.selections[gid].team = team;
+    render();
+    return;
+  }
+});
+
+document.getElementById('content').addEventListener('change', async (e)=>{
+  const t = e.target;
+
+  if(t.id === 'week-select'){
+    draft.week = Number(t.value);
+    draft.selections = {};
+    render();
+    return;
+  }
+
+  if(t.id === 'reveal-week-select'){
+    revealWeek = Number(t.value);
+    render();
+    return;
+  }
+
+  if(t.id === 'admin-week-select'){
+    adminNewWeek = Number(t.value);
+    render();
+    return;
+  }
+
+  if(t.classList.contains('include-cb')){
+    const gid = t.dataset.game;
+    if(t.checked){
+      draft.selections[gid] = { team:null, wager:null };
+    } else {
+      delete draft.selections[gid];
+    }
+    render();
+    return;
+  }
+
+  if(t.classList.contains('wager-select')){
+    const gid = t.dataset.game;
+    if(draft.selections[gid]) draft.selections[gid].wager = t.value ? Number(t.value) : null;
+    render();
+    return;
+  }
+
+  if(t.classList.contains('score-input')){
+    const id = t.dataset.id, side = t.dataset.side;
+    const newWeeksScore = JSON.parse(JSON.stringify(state.weeks));
+    const game = newWeeksScore[adminNewWeek].games.find(g=>g.id===id);
+    if(!game) return;
+    const val = t.value === '' ? null : Number(t.value);
+    if(side==='A') game.scoreA = val; else game.scoreB = val;
+    const okScore = await saveKey('weeks', newWeeksScore, true);
+    if(!okScore){ showFlash('Could not save that score — try entering it again.', 'err'); return; }
+    state.weeks = newWeeksScore;
+    render();
+    return;
+  }
+});
+
+loadAll();
+</script>
+</body>
+</html>
